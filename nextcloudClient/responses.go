@@ -70,3 +70,21 @@ type UserSubadminGroupsResponse struct {
 	RequestMeta *MetaFragment `xml:"meta"`
 	GroupNames  []string      `xml:"data>element"`
 }
+
+type GetGroupsResponse struct {
+	XMLName     xml.Name      `xml:"ocs"`
+	RequestMeta *MetaFragment `xml:"meta"`
+	GroupNames  []string      `xml:"data>groups>element"`
+}
+
+type GetGroupMembersResponse struct {
+	XMLName     xml.Name      `xml:"ocs"`
+	RequestMeta *MetaFragment `xml:"meta"`
+	UserNames   []string      `xml:"data>users>element"`
+}
+
+type GetGroupSubadminsResponse struct {
+	XMLName     xml.Name      `xml:"ocs"`
+	RequestMeta *MetaFragment `xml:"meta"`
+	UserNames   []string      `xml:"data>element"`
+}
