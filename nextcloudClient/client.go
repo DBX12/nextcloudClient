@@ -19,14 +19,14 @@ type Client struct {
 	password   string
 }
 
-func NewClient(host, username, password string) (*Client, error) {
+func NewClient(host, username, password string) *Client {
 	c := Client{
 		HostURL:    host + "/ocs/v1.php",
 		username:   username,
 		password:   password,
 		HTTPClient: &http.Client{Timeout: 10 * time.Second},
 	}
-	return &c, nil
+	return &c
 }
 
 func (c *Client) addHeadersForBody(req *http.Request, contentLength int) {
