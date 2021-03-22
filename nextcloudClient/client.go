@@ -57,7 +57,13 @@ func (c *Client) doRequest(req *http.Request) ([]byte, error) {
 
 func doSimpleRequest(c *Client, method string, endpoint string, bodyData *url.Values) (bool, error) {
 
-	req, err := http.NewRequest(method, endpoint, strings.NewReader(bodyData.Encode()))
+	var req *http.Request
+	var err error
+	if bodyData != nil {
+		req, err = http.NewRequest(method, endpoint, strings.NewReader(bodyData.Encode()))
+	} else {
+		req, err = http.NewRequest(method, endpoint, nil)
+	}
 	if err != nil {
 		return false, err
 	}
