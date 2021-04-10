@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"nextcloudClient/nextcloudClient"
+	"github.com/dbx12/nextcloudClient/nextcloudClient"
 )
 
 func main() {

@@ -1,4 +1,4 @@
-module nextcloudClient
+module github.com/dbx12/nextcloudClient
 
 go 1.13
 
