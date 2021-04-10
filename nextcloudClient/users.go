@@ -17,6 +17,17 @@ const (
 
 const QuotaUnlimited = "none"
 
+type UserData struct {
+	UserId           string
+	Password         string
+	DisplayName      string
+	Email            string
+	GroupIds         []string
+	SubadminGroupIds []string
+	Quota            string
+	Language         string
+}
+
 func (c *Client) GetUsers() ([]string, error) {
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/cloud/users", c.HostURL), nil)
 	if err != nil {
@@ -39,6 +50,63 @@ func (c *Client) GetUsers() ([]string, error) {
 	}
 
 	return response.UserNames, nil
+}
+
+func ValidateUserData(userData *UserData) (bool, []string) {
+	var problems []string
+	result := true
+	if userData.UserId == "" {
+		problems = append(problems, "UserId must not be empty")
+		result = false
+	}
+	if userData.Email == "" && userData.Password == "" {
+		problems = append(problems, "Either Password or Email must be set")
+		result = false
+	}
+	return result, problems
+}
+
+func (c *Client) CreateUser(userData *UserData) (bool, error) {
+	bodyData := url.Values{}
+
+	result, problems := ValidateUserData(userData)
+	if result == false {
+		return false, errors.New(strings.Join(problems, "\n"))
+	}
+
+	bodyData.Set("userId", userData.UserId)
+	if userData.Password != "" {
+		bodyData.Set("password", userData.Password)
+	}
+	if userData.DisplayName != "" {
+		bodyData.Set("displayName", userData.DisplayName)
+	}
+	if userData.Email != "" {
+		bodyData.Set("email", userData.Email)
+	}
+	if len(userData.GroupIds) > 0 {
+		for _, groupId := range userData.GroupIds {
+			bodyData.Add("groups", groupId)
+		}
+	}
+	if len(userData.SubadminGroupIds) > 0 {
+		for _, subadminGroupId := range userData.SubadminGroupIds {
+			bodyData.Add("subadmin", subadminGroupId)
+		}
+	}
+	if userData.Quota != "" {
+		bodyData.Set("quota", userData.Quota)
+	}
+	if userData.Language != "" {
+		bodyData.Set("language", userData.Language)
+	}
+
+	return doSimpleRequest(
+		c,
+		http.MethodPost,
+		fmt.Sprintf("%s/cloud/users", c.HostURL),
+		&bodyData,
+	)
 }
 
 func (c *Client) GetUserDetails(userId string) (*UserDetailsResponse, error) {
