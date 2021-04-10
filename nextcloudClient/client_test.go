@@ -1,12 +1,11 @@
-package tests
+package nextcloudClient
 
 import (
-	"nextcloudClient/nextcloudClient"
 	"testing"
 )
 
 func TestNewClient(t *testing.T) {
-	c := nextcloudClient.NewClient("http://example.local", "the-user", "the-secret-password")
+	c := NewClient("http://example.local", "the-user", "the-secret-password")
 	if c == nil {
 		t.Fatal("Client was not created")
 	}
