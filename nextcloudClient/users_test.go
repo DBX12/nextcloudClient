@@ -363,3 +363,970 @@ func TestClient_GetUserDetails(t *testing.T) {
 		})
 	}
 }
+
+func TestClient_UpdateUserDetail(t *testing.T) {
+	type args struct {
+		userId    string
+		attribute string
+		value     string
+	}
+	tests := []struct {
+		name         string
+		clientData   clientData
+		args         args
+		expectedBody string
+		statusCode   int
+		responseBody string
+		testOptions  RequestTestOptions
+		want         bool
+		wantErr      bool
+	}{
+		{
+			name:       "Successful update",
+			clientData: goodClient,
+			args: args{
+				userId:    "john.doe",
+				attribute: "email",
+				value:     "johnny.doe@example.local",
+			},
+			expectedBody: "key=email&value=johnny.doe%40example.local",
+			statusCode:   200,
+			responseBody: simpleResponseOk,
+			testOptions:  DefaultTestOptions(),
+			want:         true,
+			wantErr:      false,
+		},
+		{
+			name:       "Unknown attribute",
+			clientData: goodClient,
+			args: args{
+				userId:    "john.doe",
+				attribute: "something",
+				value:     "anything",
+			},
+			expectedBody: "key=something&value=anything",
+			statusCode:   401,
+			responseBody: `<?xml version="1.0"?><ocs><meta><status>failure</status><statuscode>997</statuscode><message></message><totalitems></totalitems><itemsperpage></itemsperpage></meta><data/></ocs>`,
+			testOptions:  DefaultTestOptions(),
+			want:         false,
+			wantErr:      true,
+		},
+		{
+			name:       "Bad value for quota",
+			clientData: goodClient,
+			args: args{
+				userId:    "john.doe",
+				attribute: "quota",
+				value:     "lizard",
+			},
+			expectedBody: "key=quota&value=lizard",
+			statusCode:   200,
+			responseBody: `<?xml version="1.0"?><ocs><meta><status>failure</status><statuscode>103</statuscode><message>Invalid quota value lizard</message><totalitems></totalitems><itemsperpage></itemsperpage></meta><data/></ocs>`,
+			testOptions:  DefaultTestOptions(),
+			want:         false,
+			wantErr:      true,
+		},
+		{
+			name:       "Bad credentials",
+			clientData: badClient,
+			args: args{
+				userId:    "john.doe",
+				attribute: "displayname",
+				value:     "johnny",
+			},
+			expectedBody: "key=displayname&value=johnny",
+			statusCode:   401,
+			responseBody: badLoginResponse,
+			testOptions:  DefaultTestOptions(),
+			want:         false,
+			wantErr:      true,
+		},
+	}
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	for _, tt := range tests {
+		PutResponder(fmt.Sprintf("%s/ocs/v1.php/cloud/users/%s", HOST, tt.args.userId), tt.expectedBody, tt.statusCode, tt.responseBody, tt.testOptions)
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Client{
+				HostURL:    tt.clientData.HostURL,
+				HTTPClient: tt.clientData.HTTPClient,
+				username:   tt.clientData.username,
+				password:   tt.clientData.password,
+			}
+			got, err := c.UpdateUserDetail(tt.args.userId, tt.args.attribute, tt.args.value)
+			CheckForResponderError(t, err)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("UpdateUserDetail() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("UpdateUserDetail() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestClient_DisableUser(t *testing.T) {
+	testOptions := DefaultTestOptions()
+	testOptions.ignoreBodyTest = true
+
+	type args struct {
+		userId string
+	}
+	tests := []struct {
+		name         string
+		clientData   clientData
+		args         args
+		statusCode   int
+		responseBody string
+		testOptions  RequestTestOptions
+		want         bool
+		wantErr      bool
+	}{
+		{
+			name:         "Successful request",
+			clientData:   goodClient,
+			args:         args{userId: "john.doe"},
+			statusCode:   200,
+			responseBody: simpleResponseOk,
+			testOptions:  testOptions,
+			want:         true,
+			wantErr:      false,
+		},
+		{
+			name:       "Unknown user",
+			clientData: badClient,
+			args: args{
+				userId: "jack.nobody",
+			},
+			statusCode:   200,
+			responseBody: `<?xml version="1.0"?><ocs><meta><status>failure</status><statuscode>101</statuscode><message></message><totalitems></totalitems><itemsperpage></itemsperpage></meta><data/></ocs>`,
+			testOptions:  testOptions,
+			want:         false,
+			wantErr:      true,
+		},
+		{
+			name:       "Bad credentials",
+			clientData: badClient,
+			args: args{
+				userId: "john.doe",
+			},
+			statusCode:   401,
+			responseBody: badLoginResponse,
+			testOptions:  testOptions,
+			want:         false,
+			wantErr:      true,
+		},
+	}
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			PutResponder(fmt.Sprintf("%s/ocs/v1.php/cloud/users/%s/disable", HOST, tt.args.userId), "", tt.statusCode, tt.responseBody, tt.testOptions)
+			c := &Client{
+				HostURL:    tt.clientData.HostURL,
+				HTTPClient: tt.clientData.HTTPClient,
+				username:   tt.clientData.username,
+				password:   tt.clientData.password,
+			}
+			got, err := c.DisableUser(tt.args.userId)
+			CheckForResponderError(t, err)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("DisableUser() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("DisableUser() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestClient_EnableUser(t *testing.T) {
+	testOptions := DefaultTestOptions()
+	testOptions.ignoreBodyTest = true
+
+	type args struct {
+		userId string
+	}
+	tests := []struct {
+		name         string
+		clientData   clientData
+		args         args
+		statusCode   int
+		responseBody string
+		testOptions  RequestTestOptions
+		want         bool
+		wantErr      bool
+	}{
+		{
+			name:         "Successful request",
+			clientData:   goodClient,
+			args:         args{userId: "john.doe"},
+			statusCode:   200,
+			responseBody: simpleResponseOk,
+			testOptions:  testOptions,
+			want:         true,
+			wantErr:      false,
+		},
+		{
+			name:       "Unknown user",
+			clientData: badClient,
+			args: args{
+				userId: "jack.nobody",
+			},
+			statusCode:   200,
+			responseBody: `<?xml version="1.0"?><ocs><meta><status>failure</status><statuscode>101</statuscode><message></message><totalitems></totalitems><itemsperpage></itemsperpage></meta><data/></ocs>`,
+			testOptions:  testOptions,
+			want:         false,
+			wantErr:      true,
+		},
+		{
+			name:       "Bad credentials",
+			clientData: badClient,
+			args: args{
+				userId: "john.doe",
+			},
+			statusCode:   401,
+			responseBody: badLoginResponse,
+			testOptions:  testOptions,
+			want:         false,
+			wantErr:      true,
+		},
+	}
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			PutResponder(fmt.Sprintf("%s/ocs/v1.php/cloud/users/%s/enable", HOST, tt.args.userId), "", tt.statusCode, tt.responseBody, tt.testOptions)
+			c := &Client{
+				HostURL:    tt.clientData.HostURL,
+				HTTPClient: tt.clientData.HTTPClient,
+				username:   tt.clientData.username,
+				password:   tt.clientData.password,
+			}
+			got, err := c.EnableUser(tt.args.userId)
+			CheckForResponderError(t, err)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("EnableUser() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("EnableUser() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestClient_DeleteUser(t *testing.T) {
+	testOptions := DefaultTestOptions()
+	testOptions.ignoreBodyTest = true
+
+	type args struct {
+		userId string
+	}
+	tests := []struct {
+		name         string
+		clientData   clientData
+		args         args
+		statusCode   int
+		responseBody string
+		testOptions  RequestTestOptions
+		want         bool
+		wantErr      bool
+	}{
+		{
+			name:         "Successful request",
+			clientData:   goodClient,
+			args:         args{userId: "john.doe"},
+			statusCode:   200,
+			responseBody: simpleResponseOk,
+			testOptions:  testOptions,
+			want:         true,
+			wantErr:      false,
+		},
+		{
+			name:       "Unknown user",
+			clientData: badClient,
+			args: args{
+				userId: "jack.nobody",
+			},
+			statusCode:   200,
+			responseBody: `<?xml version="1.0"?><ocs><meta><status>failure</status><statuscode>101</statuscode><message></message><totalitems></totalitems><itemsperpage></itemsperpage></meta><data/></ocs>`,
+			testOptions:  testOptions,
+			want:         false,
+			wantErr:      true,
+		},
+		{
+			name:       "Bad credentials",
+			clientData: badClient,
+			args: args{
+				userId: "john.doe",
+			},
+			statusCode:   401,
+			responseBody: badLoginResponse,
+			testOptions:  testOptions,
+			want:         false,
+			wantErr:      true,
+		},
+	}
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			GenericResponder("DELETE",
+				fmt.Sprintf("%s/ocs/v1.php/cloud/users/%s", HOST, tt.args.userId),
+				"",
+				tt.statusCode,
+				tt.responseBody,
+				tt.testOptions,
+			)
+			c := &Client{
+				HostURL:    tt.clientData.HostURL,
+				HTTPClient: tt.clientData.HTTPClient,
+				username:   tt.clientData.username,
+				password:   tt.clientData.password,
+			}
+			got, err := c.DeleteUser(tt.args.userId)
+			CheckForResponderError(t, err)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("DeleteUser() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("DeleteUser() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestClient_GetUserGroups(t *testing.T) {
+	type args struct {
+		userId string
+	}
+	tests := []struct {
+		name         string
+		clientData   clientData
+		args         args
+		statusCode   int
+		responseBody string
+		testOptions  RequestTestOptions
+		want         []string
+		wantErr      bool
+	}{
+		{
+			name:         "Successful request",
+			clientData:   goodClient,
+			args:         args{userId: "john.doe"},
+			statusCode:   200,
+			responseBody: `<?xml version="1.0"?><ocs><meta><status>ok</status><statuscode>100</statuscode><message>OK</message><totalitems></totalitems><itemsperpage></itemsperpage></meta><data><groups><element>accounting</element><element>employees</element></groups></data></ocs>`,
+			testOptions:  DefaultTestOptions(),
+			want:         []string{"accounting", "employees"},
+			wantErr:      false,
+		},
+		{
+			name:       "Unknown user",
+			clientData: badClient,
+			args: args{
+				userId: "jack.nobody",
+			},
+			statusCode:   200,
+			responseBody: `<?xml version="1.0"?><ocs><meta><status>failure</status><statuscode>998</statuscode><message></message><totalitems></totalitems><itemsperpage></itemsperpage></meta><data/></ocs>`,
+			testOptions:  DefaultTestOptions(),
+			want:         nil,
+			wantErr:      true,
+		},
+		{
+			name:       "Bad credentials",
+			clientData: badClient,
+			args: args{
+				userId: "john.doe",
+			},
+			statusCode:   401,
+			responseBody: badLoginResponse,
+			testOptions:  DefaultTestOptions(),
+			want:         nil,
+			wantErr:      true,
+		},
+	}
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			GetResponder(fmt.Sprintf("%s/ocs/v1.php/cloud/users/%s/groups", HOST, tt.args.userId), tt.statusCode, tt.responseBody, tt.testOptions)
+			c := &Client{
+				HostURL:    tt.clientData.HostURL,
+				HTTPClient: tt.clientData.HTTPClient,
+				username:   tt.clientData.username,
+				password:   tt.clientData.password,
+			}
+			got, err := c.GetUserGroups(tt.args.userId)
+			CheckForResponderError(t, err)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetUserGroups() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetUserGroups() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestClient_AddUserToGroup(t *testing.T) {
+	type args struct {
+		userId  string
+		groupId string
+	}
+	tests := []struct {
+		name         string
+		clientData   clientData
+		args         args
+		expectedBody string
+		statusCode   int
+		responseBody string
+		testOptions  RequestTestOptions
+		want         bool
+		wantErr      bool
+	}{
+		{
+			name:       "Successful request",
+			clientData: goodClient,
+			args: args{
+				userId:  "john.doe",
+				groupId: "employees",
+			},
+			expectedBody: "groupid=employees",
+			statusCode:   200,
+			responseBody: simpleResponseOk,
+			testOptions:  DefaultTestOptions(),
+			want:         true,
+			wantErr:      false,
+		},
+		{
+			name:       "Unknown user",
+			clientData: goodClient,
+			args: args{
+				userId:  "jack.nobody",
+				groupId: "employees",
+			},
+			expectedBody: "groupid=employees",
+			statusCode:   200,
+			responseBody: `<?xml version="1.0"?><ocs><meta><status>failure</status><statuscode>101</statuscode><message></message><totalitems></totalitems><itemsperpage></itemsperpage></meta><data/></ocs>`,
+			testOptions:  DefaultTestOptions(),
+			want:         false,
+			wantErr:      true,
+		},
+		{
+			name:       "Unknown group",
+			clientData: goodClient,
+			args: args{
+				userId:  "john.doe",
+				groupId: "nobodies",
+			},
+			expectedBody: "groupid=nobodies",
+			statusCode:   200,
+			responseBody: `<?xml version="1.0"?><ocs><meta><status>failure</status><statuscode>102</statuscode><message></message><totalitems></totalitems><itemsperpage></itemsperpage></meta><data/></ocs>`,
+			testOptions:  DefaultTestOptions(),
+			want:         false,
+			wantErr:      true,
+		},
+		{
+			name:       "Bad credentials",
+			clientData: badClient,
+			args: args{
+				userId:  "john.doe",
+				groupId: "employees",
+			},
+			expectedBody: "groupid=employees",
+			statusCode:   200,
+			responseBody: `<?xml version="1.0"?><ocs><meta><status>failure</status><statuscode>997</statuscode><message>Current user is not logged in</message><totalitems></totalitems><itemsperpage></itemsperpage></meta><data/></ocs>`,
+			testOptions:  DefaultTestOptions(),
+			want:         false,
+			wantErr:      true,
+		},
+	}
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			PostResponder(fmt.Sprintf("%s/ocs/v1.php/cloud/users/%s/groups", HOST, tt.args.userId), tt.expectedBody, tt.statusCode, tt.responseBody, tt.testOptions)
+			c := &Client{
+				HostURL:    tt.clientData.HostURL,
+				HTTPClient: tt.clientData.HTTPClient,
+				username:   tt.clientData.username,
+				password:   tt.clientData.password,
+			}
+			got, err := c.AddUserToGroup(tt.args.userId, tt.args.groupId)
+			CheckForResponderError(t, err)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("AddUserToGroup() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("AddUserToGroup() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestClient_RemoveUserFromGroup(t *testing.T) {
+	type args struct {
+		userId  string
+		groupId string
+	}
+	tests := []struct {
+		name         string
+		clientData   clientData
+		args         args
+		expectedBody string
+		statusCode   int
+		responseBody string
+		testOptions  RequestTestOptions
+		want         bool
+		wantErr      bool
+	}{
+		{
+			name:       "Successful request",
+			clientData: goodClient,
+			args: args{
+				userId:  "john.doe",
+				groupId: "employees",
+			},
+			expectedBody: "groupid=employees",
+			statusCode:   200,
+			responseBody: simpleResponseOk,
+			testOptions:  DefaultTestOptions(),
+			want:         true,
+			wantErr:      false,
+		},
+		{
+			name:       "Unknown user",
+			clientData: goodClient,
+			args: args{
+				userId:  "jack.nobody",
+				groupId: "employees",
+			},
+			expectedBody: "groupid=employees",
+			statusCode:   200,
+			responseBody: `<?xml version="1.0"?><ocs><meta><status>failure</status><statuscode>101</statuscode><message></message><totalitems></totalitems><itemsperpage></itemsperpage></meta><data/></ocs>`,
+			testOptions:  DefaultTestOptions(),
+			want:         false,
+			wantErr:      true,
+		},
+		{
+			name:       "Unknown group",
+			clientData: goodClient,
+			args: args{
+				userId:  "john.doe",
+				groupId: "nobodies",
+			},
+			expectedBody: "groupid=nobodies",
+			statusCode:   200,
+			responseBody: `<?xml version="1.0"?><ocs><meta><status>failure</status><statuscode>102</statuscode><message></message><totalitems></totalitems><itemsperpage></itemsperpage></meta><data/></ocs>`,
+			testOptions:  DefaultTestOptions(),
+			want:         false,
+			wantErr:      true,
+		},
+		{
+			name:       "Bad credentials",
+			clientData: badClient,
+			args: args{
+				userId:  "john.doe",
+				groupId: "employees",
+			},
+			expectedBody: "groupid=employees",
+			statusCode:   200,
+			responseBody: `<?xml version="1.0"?><ocs><meta><status>failure</status><statuscode>997</statuscode><message>Current user is not logged in</message><totalitems></totalitems><itemsperpage></itemsperpage></meta><data/></ocs>`,
+			testOptions:  DefaultTestOptions(),
+			want:         false,
+			wantErr:      true,
+		},
+	}
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			GenericResponder("DELETE", fmt.Sprintf("%s/ocs/v1.php/cloud/users/%s/groups", HOST, tt.args.userId), tt.expectedBody, tt.statusCode, tt.responseBody, tt.testOptions)
+			c := &Client{
+				HostURL:    tt.clientData.HostURL,
+				HTTPClient: tt.clientData.HTTPClient,
+				username:   tt.clientData.username,
+				password:   tt.clientData.password,
+			}
+			got, err := c.RemoveUserFromGroup(tt.args.userId, tt.args.groupId)
+			CheckForResponderError(t, err)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("RemoveUserFromGroup() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("RemoveUserFromGroup() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestClient_PromoteToSubadmin(t *testing.T) {
+	type args struct {
+		userId  string
+		groupId string
+	}
+	tests := []struct {
+		name         string
+		clientData   clientData
+		args         args
+		expectedBody string
+		statusCode   int
+		responseBody string
+		testOptions  RequestTestOptions
+		want         bool
+		wantErr      bool
+	}{
+		{
+			name:       "Successful request",
+			clientData: goodClient,
+			args: args{
+				userId:  "john.doe",
+				groupId: "employees",
+			},
+			expectedBody: "groupid=employees",
+			statusCode:   200,
+			responseBody: simpleResponseOk,
+			testOptions:  DefaultTestOptions(),
+			want:         true,
+			wantErr:      false,
+		},
+		{
+			name:       "Unknown user",
+			clientData: goodClient,
+			args: args{
+				userId:  "jack.nobody",
+				groupId: "employees",
+			},
+			expectedBody: "groupid=employees",
+			statusCode:   200,
+			responseBody: `<?xml version="1.0"?><ocs><meta><status>failure</status><statuscode>101</statuscode><message></message><totalitems></totalitems><itemsperpage></itemsperpage></meta><data/></ocs>`,
+			testOptions:  DefaultTestOptions(),
+			want:         false,
+			wantErr:      true,
+		},
+		{
+			name:       "Unknown group",
+			clientData: goodClient,
+			args: args{
+				userId:  "john.doe",
+				groupId: "nobodies",
+			},
+			expectedBody: "groupid=nobodies",
+			statusCode:   200,
+			responseBody: `<?xml version="1.0"?><ocs><meta><status>failure</status><statuscode>102</statuscode><message></message><totalitems></totalitems><itemsperpage></itemsperpage></meta><data/></ocs>`,
+			testOptions:  DefaultTestOptions(),
+			want:         false,
+			wantErr:      true,
+		},
+		{
+			name:       "Bad credentials",
+			clientData: badClient,
+			args: args{
+				userId:  "john.doe",
+				groupId: "employees",
+			},
+			expectedBody: "groupid=employees",
+			statusCode:   200,
+			responseBody: `<?xml version="1.0"?><ocs><meta><status>failure</status><statuscode>997</statuscode><message>Current user is not logged in</message><totalitems></totalitems><itemsperpage></itemsperpage></meta><data/></ocs>`,
+			testOptions:  DefaultTestOptions(),
+			want:         false,
+			wantErr:      true,
+		},
+	}
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			PostResponder(fmt.Sprintf("%s/ocs/v1.php/cloud/users/%s/subadmins", HOST, tt.args.userId), tt.expectedBody, tt.statusCode, tt.responseBody, tt.testOptions)
+			c := &Client{
+				HostURL:    tt.clientData.HostURL,
+				HTTPClient: tt.clientData.HTTPClient,
+				username:   tt.clientData.username,
+				password:   tt.clientData.password,
+			}
+			got, err := c.PromoteToSubadmin(tt.args.userId, tt.args.groupId)
+			CheckForResponderError(t, err)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("PromoteToSubadmin() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("PromoteToSubadmin() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestClient_DemoteFromSubadmin(t *testing.T) {
+	type args struct {
+		userId  string
+		groupId string
+	}
+	tests := []struct {
+		name         string
+		clientData   clientData
+		args         args
+		expectedBody string
+		statusCode   int
+		responseBody string
+		testOptions  RequestTestOptions
+		want         bool
+		wantErr      bool
+	}{
+		{
+			name:       "Successful request",
+			clientData: goodClient,
+			args: args{
+				userId:  "john.doe",
+				groupId: "employees",
+			},
+			expectedBody: "groupid=employees",
+			statusCode:   200,
+			responseBody: simpleResponseOk,
+			testOptions:  DefaultTestOptions(),
+			want:         true,
+			wantErr:      false,
+		},
+		{
+			name:       "Unknown user",
+			clientData: goodClient,
+			args: args{
+				userId:  "jack.nobody",
+				groupId: "employees",
+			},
+			expectedBody: "groupid=employees",
+			statusCode:   200,
+			responseBody: `<?xml version="1.0"?><ocs><meta><status>failure</status><statuscode>101</statuscode><message></message><totalitems></totalitems><itemsperpage></itemsperpage></meta><data/></ocs>`,
+			testOptions:  DefaultTestOptions(),
+			want:         false,
+			wantErr:      true,
+		},
+		{
+			name:       "Unknown group",
+			clientData: goodClient,
+			args: args{
+				userId:  "john.doe",
+				groupId: "nobodies",
+			},
+			expectedBody: "groupid=nobodies",
+			statusCode:   200,
+			responseBody: `<?xml version="1.0"?><ocs><meta><status>failure</status><statuscode>102</statuscode><message></message><totalitems></totalitems><itemsperpage></itemsperpage></meta><data/></ocs>`,
+			testOptions:  DefaultTestOptions(),
+			want:         false,
+			wantErr:      true,
+		},
+		{
+			name:       "Bad credentials",
+			clientData: badClient,
+			args: args{
+				userId:  "john.doe",
+				groupId: "employees",
+			},
+			expectedBody: "groupid=employees",
+			statusCode:   200,
+			responseBody: `<?xml version="1.0"?><ocs><meta><status>failure</status><statuscode>997</statuscode><message>Current user is not logged in</message><totalitems></totalitems><itemsperpage></itemsperpage></meta><data/></ocs>`,
+			testOptions:  DefaultTestOptions(),
+			want:         false,
+			wantErr:      true,
+		},
+	}
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			GenericResponder("DELETE", fmt.Sprintf("%s/ocs/v1.php/cloud/users/%s/subadmins", HOST, tt.args.userId), tt.expectedBody, tt.statusCode, tt.responseBody, tt.testOptions)
+			c := &Client{
+				HostURL:    tt.clientData.HostURL,
+				HTTPClient: tt.clientData.HTTPClient,
+				username:   tt.clientData.username,
+				password:   tt.clientData.password,
+			}
+			got, err := c.DemoteFromSubadmin(tt.args.userId, tt.args.groupId)
+			CheckForResponderError(t, err)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("DemoteFromSubadmin() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("DemoteFromSubadmin() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestClient_GetSubadminGroups(t *testing.T) {
+	type args struct {
+		userId string
+	}
+	tests := []struct {
+		name         string
+		clientData   clientData
+		args         args
+		statusCode   int
+		responseBody string
+		testOptions  RequestTestOptions
+		want         []string
+		wantErr      bool
+	}{
+		{
+			name:         "Successful request",
+			clientData:   goodClient,
+			args:         args{userId: "john.doe"},
+			statusCode:   200,
+			responseBody: `<?xml version="1.0"?><ocs><meta><status>ok</status><statuscode>100</statuscode><message>OK</message><totalitems></totalitems><itemsperpage></itemsperpage></meta><data><element>accounting</element><element>employees</element></data></ocs>`,
+			testOptions:  DefaultTestOptions(),
+			want:         []string{"accounting", "employees"},
+			wantErr:      false,
+		},
+		{
+			name:       "Unknown user",
+			clientData: badClient,
+			args: args{
+				userId: "jack.nobody",
+			},
+			statusCode:   200,
+			responseBody: `<?xml version="1.0"?><ocs><meta><status>failure</status><statuscode>998</statuscode><message></message><totalitems></totalitems><itemsperpage></itemsperpage></meta><data/></ocs>`,
+			testOptions:  DefaultTestOptions(),
+			want:         nil,
+			wantErr:      true,
+		},
+		{
+			name:       "Bad credentials",
+			clientData: badClient,
+			args: args{
+				userId: "john.doe",
+			},
+			statusCode:   401,
+			responseBody: badLoginResponse,
+			testOptions:  DefaultTestOptions(),
+			want:         nil,
+			wantErr:      true,
+		},
+	}
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			GetResponder(fmt.Sprintf("%s/ocs/v1.php/cloud/users/%s/subadmins", HOST, tt.args.userId), tt.statusCode, tt.responseBody, tt.testOptions)
+			c := &Client{
+				HostURL:    tt.clientData.HostURL,
+				HTTPClient: tt.clientData.HTTPClient,
+				username:   tt.clientData.username,
+				password:   tt.clientData.password,
+			}
+			got, err := c.GetSubadminGroups(tt.args.userId)
+			CheckForResponderError(t, err)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetSubadminGroups() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetSubadminGroups() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestClient_ResendWelcomeMail(t *testing.T) {
+	testOptions := DefaultTestOptions()
+	testOptions.ignoreBodyTest = true
+	type args struct {
+		userId string
+	}
+	tests := []struct {
+		name         string
+		clientData   clientData
+		args         args
+		statusCode   int
+		responseBody string
+		testOptions  RequestTestOptions
+		want         bool
+		wantErr      bool
+	}{
+		{
+			name:         "Successful request",
+			clientData:   goodClient,
+			args:         args{userId: "john.doe"},
+			statusCode:   200,
+			responseBody: simpleResponseOk,
+			testOptions:  testOptions,
+			want:         true,
+			wantErr:      false,
+		},
+		{
+			name:       "Unknown user",
+			clientData: badClient,
+			args: args{
+				userId: "jack.nobody",
+			},
+			statusCode:   200,
+			responseBody: `<?xml version="1.0"?><ocs><meta><status>failure</status><statuscode>998</statuscode><message></message><totalitems></totalitems><itemsperpage></itemsperpage></meta><data/></ocs>`,
+			testOptions:  testOptions,
+			want:         false,
+			wantErr:      true,
+		},
+		{
+			name:       "Bad credentials",
+			clientData: badClient,
+			args: args{
+				userId: "john.doe",
+			},
+			statusCode:   401,
+			responseBody: badLoginResponse,
+			testOptions:  testOptions,
+			want:         false,
+			wantErr:      true,
+		},
+	}
+
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			PostResponder(fmt.Sprintf("%s/ocs/v1.php/cloud/users/%s/welcome", HOST, tt.args.userId), "", tt.statusCode, tt.responseBody, tt.testOptions)
+			c := &Client{
+				HostURL:    tt.clientData.HostURL,
+				HTTPClient: tt.clientData.HTTPClient,
+				username:   tt.clientData.username,
+				password:   tt.clientData.password,
+			}
+			got, err := c.ResendWelcomeMail(tt.args.userId)
+			CheckForResponderError(t, err)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetSubadminGroups() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetSubadminGroups() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
