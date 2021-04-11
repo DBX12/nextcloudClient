@@ -38,10 +38,18 @@ func DefaultTestOptions() RequestTestOptions {
 }
 
 func PostResponder(url string, expectedBody string, statusCode int, responseBody string, options RequestTestOptions) {
+	GenericResponder("POST", url, expectedBody, statusCode, responseBody, options)
+}
+
+func PutResponder(url string, expectedBody string, statusCode int, responseBody string, options RequestTestOptions) {
+	GenericResponder("PUT", url, expectedBody, statusCode, responseBody, options)
+}
+
+func GenericResponder(method string, url string, expectedBody string, statusCode int, responseBody string, options RequestTestOptions) {
 	if options.noResetBeforeRegister == false {
 		httpmock.Reset()
 	}
-	httpmock.RegisterResponder("POST", url,
+	httpmock.RegisterResponder(method, url,
 		func(request *http.Request) (*http.Response, error) {
 			if options.ignoreHeaderTest == false {
 				headerValue := request.Header.Get("OCS-APIRequest")
@@ -67,6 +75,9 @@ func PostResponder(url string, expectedBody string, statusCode int, responseBody
 				}
 			}
 			if options.ignoreBodyTest == false {
+				if request.Body == nil {
+					return nil, errors.New(fmt.Sprintf("%s, Body is empty, want %s got nil", responderErrorTag, expectedBody))
+				}
 				actualBody, _ := ioutil.ReadAll(request.Body)
 				if !reflect.DeepEqual(actualBody, []byte(expectedBody)) {
 					return nil, errors.New(fmt.Sprintf("%s, Body mismatched, want %s got %s", responderErrorTag, expectedBody, actualBody))
