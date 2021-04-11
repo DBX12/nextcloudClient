@@ -42,10 +42,10 @@ type UserDetailsResponse struct {
 	Enabled         bool          `xml:"data>enabled"`
 	StorageLocation string        `xml:"data>storageLocation"`
 	Id              string        `xml:"data>id"`
-	LastLogin       string        `xml:"data>last_login"`
+	LastLogin       string        `xml:"data>lastLogin"`
 	Backend         string        `xml:"data>backend"`
 	// SubadminGroups list of groupIds this user is an admin of
-	SubadminGroups []string   `xml:"subadmin>element"`
+	SubadminGroups []string   `xml:"data>subadmin>element"`
 	Quota          *UserQuota `xml:"data>quota"`
 	Email          string     `xml:"data>email"`
 	DisplayName    string     `xml:"data>displayname"`
@@ -54,10 +54,10 @@ type UserDetailsResponse struct {
 	Website        string     `xml:"data>website"`
 	Twitter        string     `xml:"data>twitter"`
 	// Groups list of groupIds this user belongs to
-	Groups              []string                       `xml:"data>groups>element"`
-	Language            string                         `xml:"data>language"`
-	Locale              string                         `xml:"data>locale"`
-	BackendCapabilities UserDetailsBackendCapabilities `xml:"data>backendCapabilities"`
+	Groups              []string                        `xml:"data>groups>element"`
+	Language            string                          `xml:"data>language"`
+	Locale              string                          `xml:"data>locale"`
+	BackendCapabilities *UserDetailsBackendCapabilities `xml:"data>backendCapabilities"`
 }
 
 type UserGroupsResponse struct {
