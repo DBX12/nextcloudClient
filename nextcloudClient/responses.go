@@ -7,6 +7,7 @@ type MetaFragment struct {
 	StatusCode int `xml:"statuscode"`
 	// Status Human readable error description
 	Status       string `xml:"status"`
+	Message      string `xml:"message"`
 	TotalItems   int    `xml:"totalitems"`
 	ItemsPerPage int    `xml:"itemsperpage"`
 }

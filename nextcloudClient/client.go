@@ -83,7 +83,7 @@ func doSimpleRequest(c *Client, method string, endpoint string, bodyData *url.Va
 	}
 
 	if response.RequestMeta.StatusCode != StatusSuccess {
-		return false, errors.New(fmt.Sprintf("Api returned a status code %d indicating failure. Message: %s", response.RequestMeta.StatusCode, response.RequestMeta.Status))
+		return false, errors.New(fmt.Sprintf("Api returned a status code %d indicating failure. Message: %s", response.RequestMeta.StatusCode, response.RequestMeta.Message))
 	}
 
 	return true, nil
