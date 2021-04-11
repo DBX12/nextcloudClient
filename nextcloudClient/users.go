@@ -74,7 +74,7 @@ func (c *Client) CreateUser(userData *UserData) (bool, error) {
 		return false, errors.New(strings.Join(problems, "\n"))
 	}
 
-	bodyData.Set("userId", userData.UserId)
+	bodyData.Set("userid", userData.UserId)
 	if userData.Password != "" {
 		bodyData.Set("password", userData.Password)
 	}
@@ -86,12 +86,12 @@ func (c *Client) CreateUser(userData *UserData) (bool, error) {
 	}
 	if len(userData.GroupIds) > 0 {
 		for _, groupId := range userData.GroupIds {
-			bodyData.Add("groups", groupId)
+			bodyData.Add("groups[]", groupId)
 		}
 	}
 	if len(userData.SubadminGroupIds) > 0 {
 		for _, subadminGroupId := range userData.SubadminGroupIds {
-			bodyData.Add("subadmin", subadminGroupId)
+			bodyData.Add("subadmin[]", subadminGroupId)
 		}
 	}
 	if userData.Quota != "" {
