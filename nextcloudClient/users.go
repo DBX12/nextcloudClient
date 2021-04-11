@@ -28,6 +28,20 @@ type UserData struct {
 	Language         string
 }
 
+func (userData *UserData) Validate() (bool, []string) {
+	var problems []string
+	result := true
+	if userData.UserId == "" {
+		problems = append(problems, "UserId must not be empty")
+		result = false
+	}
+	if userData.Email == "" && userData.Password == "" {
+		problems = append(problems, "Either Password or Email must be set")
+		result = false
+	}
+	return result, problems
+}
+
 func (c *Client) GetUsers() ([]string, error) {
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/cloud/users", c.HostURL), nil)
 	if err != nil {
@@ -52,24 +66,10 @@ func (c *Client) GetUsers() ([]string, error) {
 	return response.UserNames, nil
 }
 
-func ValidateUserData(userData *UserData) (bool, []string) {
-	var problems []string
-	result := true
-	if userData.UserId == "" {
-		problems = append(problems, "UserId must not be empty")
-		result = false
-	}
-	if userData.Email == "" && userData.Password == "" {
-		problems = append(problems, "Either Password or Email must be set")
-		result = false
-	}
-	return result, problems
-}
-
 func (c *Client) CreateUser(userData *UserData) (bool, error) {
 	bodyData := url.Values{}
 
-	result, problems := ValidateUserData(userData)
+	result, problems := userData.Validate()
 	if result == false {
 		return false, errors.New(strings.Join(problems, "\n"))
 	}
