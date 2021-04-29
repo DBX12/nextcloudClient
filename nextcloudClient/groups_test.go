@@ -1,6 +1,7 @@
 package nextcloudClient
 
 import (
+	"fmt"
 	"github.com/jarcoal/httpmock"
 	"io/ioutil"
 	"net/http"
@@ -25,6 +26,67 @@ func TestGetGroups(t *testing.T) {
 	expected := []string{"admin", "testGroup"}
 	if !reflect.DeepEqual(groups, expected) {
 		t.Fatal("Expectation not met")
+	}
+}
+
+func TestClient_GetGroup(t *testing.T) {
+	testOptions := DefaultTestOptions()
+	type args struct {
+		groupId string
+	}
+	tests := []struct {
+		name         string
+		clientData   clientData
+		args         args
+		statusCode   int
+		responseBody string
+		testOptions  RequestTestOptions
+		want         string
+		wantErr      bool
+	}{
+		{
+			name:         "Successful request",
+			clientData:   goodClient,
+			args:         args{groupId: "admin"},
+			statusCode:   200,
+			responseBody: `<?xml version="1.0"?><ocs><meta><status>ok</status><statuscode>100</statuscode><message>OK</message><totalitems></totalitems><itemsperpage></itemsperpage></meta><data><groups><element>admin</element></groups></data></ocs>`,
+			testOptions:  testOptions,
+			want:         "admin",
+			wantErr:      false,
+		},
+		{
+			name:         "No group with that id",
+			clientData:   goodClient,
+			args:         args{groupId: "unknownGroup"},
+			statusCode:   200,
+			responseBody: `<?xml version="1.0"?><ocs><meta><status>ok</status><statuscode>100</statuscode><message>OK</message><totalitems></totalitems><itemsperpage></itemsperpage></meta><data><groups/></data></ocs>`,
+			testOptions:  testOptions,
+			want:         "",
+			wantErr:      true,
+		},
+	}
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			GetResponder(fmt.Sprintf("%s/ocs/v1.php/cloud/groups?search=%s", HOST, tt.args.groupId), tt.statusCode, tt.responseBody, tt.testOptions)
+			c := &Client{
+				HostURL:    tt.clientData.HostURL,
+				HTTPClient: tt.clientData.HTTPClient,
+				username:   tt.clientData.username,
+				password:   tt.clientData.password,
+			}
+			got, err := c.GetGroup(tt.args.groupId)
+			CheckForResponderError(t, err)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetGroup() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("GetGroup() got = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
 
