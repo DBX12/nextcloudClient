@@ -1,5 +1,5 @@
 .gitignore                      export-ignore
 .gitattributes                  export-ignore
-nextcloudClient/*_test.go       export-ignore
-nextcloudClient/test_utils.go   export-ignore
+*_test.go       export-ignore
+test_utils.go   export-ignore
 Makefile                        export-ignore
