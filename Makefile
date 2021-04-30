@@ -1,4 +1,4 @@
-SOURCES=./nextcloudClient
+SOURCES=./
 
 test:
 	cd $(SOURCES) && \
